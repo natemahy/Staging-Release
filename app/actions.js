@@ -7,14 +7,21 @@ import bcrypt from 'bcryptjs';
 import { SignJWT } from 'jose';
 import { cookies } from 'next/headers';
 
-// Connect to Neon
-const sql = neon(process.env.DATABASE_URL);
+// --- HELPER: Connect lazily to prevent top-level crashes ---
+function getSql() {
+  if (!process.env.DATABASE_URL) {
+    throw new Error("CRITICAL: DATABASE_URL is missing from Vercel Environment Variables.");
+  }
+  return neon(process.env.DATABASE_URL);
+}
 
 // ==========================================
 // 1. SHIPMENT LOGIC (Vendor Form)
 // ==========================================
 
 export async function submitShipment(formData) {
+  const sql = getSql(); // Connect here instead of top-level
+  
   async function uploadFiles(fieldName) {
     const files = formData.getAll(fieldName);
     const urls = [];
@@ -76,14 +83,16 @@ export async function submitShipment(formData) {
 // ==========================================
 
 export async function getCompanies() {
+  const sql = getSql();
   const companies = await sql`SELECT * FROM companies ORDER BY name ASC`;
   return companies;
 }
 
 export async function createCompany(formData) {
+  const sql = getSql();
   try {
     const name = formData.get('name');
-    const code = formData.get('code_prefix').toUpperCase(); // e.g. "TSL"
+    const code = formData.get('code_prefix').toUpperCase();
 
     await sql`
       INSERT INTO companies (name, code_prefix)
@@ -103,6 +112,7 @@ export async function createCompany(formData) {
 }
 
 export async function createUser(formData) {
+  const sql = getSql();
   try {
     const email = formData.get('email');
     const role = formData.get('role');
@@ -125,6 +135,7 @@ export async function createUser(formData) {
 }
 
 export async function getUsers() {
+  const sql = getSql();
   const users = await sql`
     SELECT users.*, companies.name as company_name 
     FROM users 
@@ -135,12 +146,13 @@ export async function getUsers() {
 }
 
 // ==========================================
-// 3. AUTHENTICATION LOGIC
+// 3. AUTHENTICATION LOGIC (UPDATED)
 // ==========================================
 
 const JWT_SECRET = new TextEncoder().encode('my-super-secret-key-change-this-later');
 
 export async function activateAccount(formData) {
+  const sql = getSql();
   const email = formData.get('email');
   const password = formData.get('password');
   
@@ -156,18 +168,15 @@ export async function activateAccount(formData) {
   return await loginUser(formData);
 }
 
-// --- UPDATED SAFETY LOGIN FUNCTION ---
 export async function loginUser(formData) {
   try {
+    // 1. Initialize DB inside the function (Safe Mode)
+    const sql = getSql();
+    
     const email = formData.get('email');
     const password = formData.get('password');
 
-    console.log("Attempting login for:", email); // Log for Vercel Dashboard
-
-    // 1. Check if we have a database connection string
-    if (!process.env.DATABASE_URL) {
-      throw new Error("Critical Error: DATABASE_URL is missing in Environment Variables.");
-    }
+    console.log("Attempting login for:", email);
 
     const users = await sql`SELECT * FROM users WHERE email = ${email}`;
     const user = users[0];
@@ -176,11 +185,9 @@ export async function loginUser(formData) {
       return { success: false, message: 'User not found or no password set.' };
     }
 
-    // 2. Check password (this often fails if bcryptjs is missing)
     const isValid = await bcrypt.compare(password, user.password_hash);
     if (!isValid) return { success: false, message: 'Invalid password.' };
 
-    // 3. Create Session Token
     const token = await new SignJWT({ 
         id: user.id, 
         role: user.role, 
@@ -190,7 +197,6 @@ export async function loginUser(formData) {
       .setExpirationTime('24h')
       .sign(JWT_SECRET);
 
-    // 4. Set Cookie (Handle Secure vs Local logic)
     (await cookies()).set('session', token, { 
       httpOnly: true, 
       secure: process.env.NODE_ENV === 'production', 
@@ -201,17 +207,17 @@ export async function loginUser(formData) {
 
   } catch (error) {
     console.error("LOGIN CRASH DETAILS:", error);
-    // Return the actual error message to the browser so we can see it
+    // This will now show the REAL reason on your screen
     return { success: false, message: `System Error: ${error.message}` };
   }
 }
-// -------------------------------------
 
 // ==========================================
 // 4. DASHBOARD STATS LOGIC
 // ==========================================
 
 export async function getDashboardStats(role, companyId) {
+  const sql = getSql();
   const companyFilter = (role === 'customer' && companyId) 
     ? sql`AND company_id = ${companyId}` 
     : sql``;
@@ -247,6 +253,7 @@ export async function getDashboardStats(role, companyId) {
 // ==========================================
 
 export async function getShipments(role, companyId) {
+  const sql = getSql();
   const companyFilter = (role === 'customer' && companyId) 
     ? sql`AND shipments.company_id = ${companyId}` 
     : sql``;
@@ -271,6 +278,7 @@ export async function getShipments(role, companyId) {
 // ==========================================
 
 export async function getShipmentById(id) {
+  const sql = getSql();
   const result = await sql`
     SELECT shipments.*, companies.name as company_name 
     FROM shipments 
@@ -290,9 +298,10 @@ export async function getShipmentById(id) {
 }
 
 export async function addComment(formData) {
+  const sql = getSql();
   const shipmentId = formData.get('shipment_id');
   const message = formData.get('message');
-  const userId = 1; // Placeholder for session user ID
+  const userId = 1;
 
   await sql`
     INSERT INTO comments (shipment_id, user_id, message)
@@ -303,10 +312,10 @@ export async function addComment(formData) {
 }
 
 export async function saveShipmentChanges(formData) {
+  const sql = getSql();
   const id = formData.get('id');
-  const role = formData.get('role'); // 'vendor' or 'admin'
+  const role = formData.get('role');
 
-  // 1. Gather editable fields
   const commonUpdates = {
     po_number: formData.get('po_number'),
     part_number: formData.get('part_number'),
@@ -315,7 +324,6 @@ export async function saveShipmentChanges(formData) {
     package_type: formData.get('package_type'),
     qty_received: formData.get('qty_received'),
     warehouse_placement: formData.get('warehouse_placement'),
-    // NEW FIELDS
     warehouse_column_cell: formData.get('warehouse_column_cell'),
     original_id_number: formData.get('original_id_number'),
   };
@@ -360,7 +368,6 @@ export async function saveShipmentChanges(formData) {
     `;
   }
 
-  // Refresh all views
   revalidatePath(`/vendor/shipments/${id}`);
   revalidatePath(`/admin/shipments/${id}`);
   revalidatePath(`/admin/dashboard`);
