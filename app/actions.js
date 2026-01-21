@@ -40,7 +40,8 @@ export async function submitShipment(formData) {
         qty_received, warehouse_placement, quality_check,
         damaged_photos, packing_slip_photos,
         dimensional_report_photos, shipment_photos,
-        status, submitted_by_user_id
+        status, submitted_by_user_id,
+        warehouse_column_cell, original_id_number
       ) VALUES (
         ${formData.get('delivery_date')},
         ${formData.get('company_id')}, 
@@ -57,7 +58,9 @@ export async function submitShipment(formData) {
         ${dimReportUrls},     
         ${shipmentUrls},      
         'Received',           
-        1                     
+        1,
+        ${formData.get('warehouse_column_cell')},
+        ${formData.get('original_id_number')}
       )
     `;
   } catch (error) {
@@ -77,7 +80,6 @@ export async function getCompanies() {
   return companies;
 }
 
-// --- NEW FUNCTION ADDED HERE ---
 export async function createCompany(formData) {
   try {
     const name = formData.get('name');
@@ -93,14 +95,12 @@ export async function createCompany(formData) {
     return { success: true };
   } catch (error) {
     console.error('Create Company Error:', error);
-    // Error code 23505 is for unique constraint violations (duplicate names)
     if (error.code === '23505') {
        return { success: false, message: 'Company name or code already exists.' };
     }
     return { success: false, message: 'Failed to create company.' };
   }
 }
-// -------------------------------
 
 export async function createUser(formData) {
   try {
@@ -290,6 +290,9 @@ export async function saveShipmentChanges(formData) {
     package_type: formData.get('package_type'),
     qty_received: formData.get('qty_received'),
     warehouse_placement: formData.get('warehouse_placement'),
+    // NEW FIELDS
+    warehouse_column_cell: formData.get('warehouse_column_cell'),
+    original_id_number: formData.get('original_id_number'),
   };
 
   if (role === 'vendor') {
@@ -303,6 +306,8 @@ export async function saveShipmentChanges(formData) {
         package_type = ${commonUpdates.package_type},
         qty_received = ${commonUpdates.qty_received},
         warehouse_placement = ${commonUpdates.warehouse_placement},
+        warehouse_column_cell = ${commonUpdates.warehouse_column_cell},
+        original_id_number = ${commonUpdates.original_id_number},
         status = ${status}
       WHERE id = ${id}
     `;
@@ -321,6 +326,8 @@ export async function saveShipmentChanges(formData) {
         package_type = ${commonUpdates.package_type},
         qty_received = ${commonUpdates.qty_received},
         warehouse_placement = ${commonUpdates.warehouse_placement},
+        warehouse_column_cell = ${commonUpdates.warehouse_column_cell},
+        original_id_number = ${commonUpdates.original_id_number},
         status = ${status},
         company_status = ${companyStatus},
         company_inspection = ${inspection}

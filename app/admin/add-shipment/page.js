@@ -1,12 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Camera, CheckCircle, AlertTriangle } from 'lucide-react'
+import { Camera, CheckCircle, AlertTriangle, ArrowLeft } from 'lucide-react'
 import { submitShipment, getCompanies } from '@/app/actions'
 import Header from '@/app/components/Header'
 import Link from 'next/link'
 
-export default function VendorCheckIn() {
+export default function AdminAddShipment() {
   const [status, setStatus] = useState('idle')
   const [isDamaged, setIsDamaged] = useState(false)
   const [companies, setCompanies] = useState([])
@@ -19,6 +19,8 @@ export default function VendorCheckIn() {
     event.preventDefault()
     setStatus('submitting')
     const formData = new FormData(event.currentTarget)
+    formData.append('submitted_by', '1') 
+
     try {
       await submitShipment(formData)
       setStatus('success')
@@ -31,15 +33,15 @@ export default function VendorCheckIn() {
   if (status === 'success') {
     return (
       <div className="min-h-screen bg-slate-50">
-        <Header role="vendor" />
+        <Header role="admin" />
         <div className="flex flex-col items-center justify-center h-[80vh] p-6">
           <CheckCircle className="w-20 h-20 text-green-600 mb-4" />
           <h2 className="text-2xl font-bold text-green-800">Shipment Logged Successfully!</h2>
           <div className="flex gap-4 mt-8">
             <button onClick={() => window.location.reload()} className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold shadow-lg hover:bg-green-700">
-              Check In Another
+              Log Another
             </button>
-            <Link href="/vendor/dashboard" className="bg-slate-200 text-slate-700 px-6 py-3 rounded-lg font-semibold hover:bg-slate-300">
+            <Link href="/admin/dashboard" className="bg-slate-200 text-slate-700 px-6 py-3 rounded-lg font-semibold hover:bg-slate-300">
               Back to Dashboard
             </Link>
           </div>
@@ -50,12 +52,17 @@ export default function VendorCheckIn() {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-20">
-      <Header role="vendor" />
+      <Header role="admin" />
 
       <div className="max-w-md mx-auto mt-6 px-4">
-        <div className="bg-blue-900 p-4 rounded-t-xl shadow-md">
-           <h1 className="text-white text-xl font-bold">New Shipment Check-In</h1>
-           <p className="text-blue-200 text-xs">Please fill out all details accurately.</p>
+        
+        <Link href="/admin/dashboard" className="flex items-center gap-2 text-slate-500 hover:text-blue-600 mb-4 font-medium">
+          <ArrowLeft size={18} /> Back to Dashboard
+        </Link>
+
+        <div className="bg-purple-900 p-4 rounded-t-xl shadow-md">
+           <h1 className="text-white text-xl font-bold">Admin Manual Entry</h1>
+           <p className="text-purple-200 text-xs">Manually logging a shipment on behalf of a vendor.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 space-y-4 bg-white shadow-sm rounded-b-xl border border-t-0">
@@ -67,7 +74,7 @@ export default function VendorCheckIn() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Owner / Customer</label>
-            <select name="company_id" required className="w-full p-3 border rounded-lg bg-white text-gray-900 font-bold focus:ring-2 focus:ring-blue-500 outline-none">
+            <select name="company_id" required className="w-full p-3 border rounded-lg bg-white text-gray-900 font-bold focus:ring-2 focus:ring-purple-500 outline-none">
               <option value="">-- Select Company --</option>
               {companies.map(c => (
                 <option key={c.id} value={c.id}>{c.name} ({c.code_prefix})</option>
@@ -172,9 +179,9 @@ export default function VendorCheckIn() {
           <button 
             type="submit" 
             disabled={status === 'submitting'}
-            className="w-full bg-blue-600 text-white p-4 rounded-xl font-bold text-lg shadow-lg hover:bg-blue-700 transition-colors"
+            className="w-full bg-purple-600 text-white p-4 rounded-xl font-bold text-lg shadow-lg hover:bg-purple-700 transition-colors"
           >
-            {status === 'submitting' ? 'Submitting...' : 'Complete Check-In'}
+            {status === 'submitting' ? 'Submitting...' : 'Log Shipment'}
           </button>
 
         </form>
@@ -189,7 +196,7 @@ function FileUpload({ label, name }) {
       <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
       <div className="flex items-center gap-2">
         <Camera className="text-gray-400" size={20} />
-        <input type="file" name={name} multiple accept="image/*" className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+        <input type="file" name={name} multiple accept="image/*" className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100" />
       </div>
     </div>
   )

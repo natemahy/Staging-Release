@@ -1,6 +1,6 @@
 'use client'
 import Link from 'next/link'
-import { LogOut, LayoutDashboard, Package, Truck, Shield } from 'lucide-react'
+import { LogOut, LayoutDashboard, Package, Truck, Shield, PlusCircle } from 'lucide-react'
 
 export default function Header({ role }) {
   const safeRole = role || 'vendor'; 
@@ -21,10 +21,13 @@ export default function Header({ role }) {
         {safeRole === 'admin' && (
           <>
             <Link href="/admin/dashboard" className="flex items-center gap-1 hover:text-purple-300 transition-colors">
-              <Shield size={16} /> Admin Control
+              <Shield size={16} /> Dashboard
             </Link>
             <Link href="/admin/users" className="flex items-center gap-1 hover:text-purple-300 transition-colors">
               <Shield size={16} /> Users
+            </Link>
+            <Link href="/admin/add-shipment" className="flex items-center gap-1 hover:text-purple-300 transition-colors">
+              <PlusCircle size={16} /> Add Shipment
             </Link>
           </>
         )}

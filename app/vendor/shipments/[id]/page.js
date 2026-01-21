@@ -64,6 +64,19 @@ export default function VendorShipmentDetails() {
               <h3 className="font-bold text-slate-900 text-lg border-b pb-2">Shipment Information</h3>
               
               <div className="grid grid-cols-2 gap-4">
+                {/* NEW FIELDS */}
+                <div>
+                   <label className="block text-xs text-slate-500 uppercase font-bold mb-1">Warehouse Col Cell</label>
+                   <select name="warehouse_column_cell" defaultValue={shipment.warehouse_column_cell} className="w-full p-2 border rounded bg-slate-50 text-gray-900 focus:bg-white outline-none">
+                      <option value="Heil G2 Sanders">Heil G2 Sanders</option>
+                      <option value="Main Warehouse">Main Warehouse</option>
+                      <option value="Holding Area">Holding Area</option>
+                      <option value="Staging Lane A">Staging Lane A</option>
+                   </select>
+                </div>
+                <InputBox label="Original ID #" name="original_id_number" val={shipment.original_id_number} />
+
+                {/* EXISTING FIELDS */}
                 <InputBox label="PO Number" name="po_number" val={shipment.po_number} />
                 <InputBox label="Part Number" name="part_number" val={shipment.part_number} />
                 <InputBox label="Qty Received" name="qty_received" val={shipment.qty_received} />
