@@ -156,31 +156,56 @@ export async function activateAccount(formData) {
   return await loginUser(formData);
 }
 
+// --- UPDATED SAFETY LOGIN FUNCTION ---
 export async function loginUser(formData) {
-  const email = formData.get('email');
-  const password = formData.get('password');
+  try {
+    const email = formData.get('email');
+    const password = formData.get('password');
 
-  const users = await sql`SELECT * FROM users WHERE email = ${email}`;
-  const user = users[0];
+    console.log("Attempting login for:", email); // Log for Vercel Dashboard
 
-  if (!user || !user.password_hash) return { success: false, message: 'Invalid credentials.' };
+    // 1. Check if we have a database connection string
+    if (!process.env.DATABASE_URL) {
+      throw new Error("Critical Error: DATABASE_URL is missing in Environment Variables.");
+    }
 
-  const isValid = await bcrypt.compare(password, user.password_hash);
-  if (!isValid) return { success: false, message: 'Invalid credentials.' };
+    const users = await sql`SELECT * FROM users WHERE email = ${email}`;
+    const user = users[0];
 
-  const token = await new SignJWT({ 
-      id: user.id, 
-      role: user.role, 
-      company_id: user.company_id 
-    })
-    .setProtectedHeader({ alg: 'HS256' })
-    .setExpirationTime('24h')
-    .sign(JWT_SECRET);
+    if (!user || !user.password_hash) {
+      return { success: false, message: 'User not found or no password set.' };
+    }
 
-  (await cookies()).set('session', token, { httpOnly: true, secure: true });
+    // 2. Check password (this often fails if bcryptjs is missing)
+    const isValid = await bcrypt.compare(password, user.password_hash);
+    if (!isValid) return { success: false, message: 'Invalid password.' };
 
-  return { success: true, role: user.role };
+    // 3. Create Session Token
+    const token = await new SignJWT({ 
+        id: user.id, 
+        role: user.role, 
+        company_id: user.company_id 
+      })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setExpirationTime('24h')
+      .sign(JWT_SECRET);
+
+    // 4. Set Cookie (Handle Secure vs Local logic)
+    (await cookies()).set('session', token, { 
+      httpOnly: true, 
+      secure: process.env.NODE_ENV === 'production', 
+      maxAge: 60 * 60 * 24 
+    });
+
+    return { success: true, role: user.role };
+
+  } catch (error) {
+    console.error("LOGIN CRASH DETAILS:", error);
+    // Return the actual error message to the browser so we can see it
+    return { success: false, message: `System Error: ${error.message}` };
+  }
 }
+// -------------------------------------
 
 // ==========================================
 // 4. DASHBOARD STATS LOGIC
