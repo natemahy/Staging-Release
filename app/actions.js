@@ -20,7 +20,7 @@ function getSql() {
 // ==========================================
 
 export async function submitShipment(formData) {
-  const sql = getSql(); // Connect here instead of top-level
+  const sql = getSql();
   
   async function uploadFiles(fieldName) {
     const files = formData.getAll(fieldName);
@@ -34,10 +34,19 @@ export async function submitShipment(formData) {
     return urls;
   }
 
+  // 1. Upload Images
   const damagedUrls = await uploadFiles('damaged_photos');
   const packingSlipUrls = await uploadFiles('packing_slip_photos');
   const dimReportUrls = await uploadFiles('dimensional_report_photos');
   const shipmentUrls = await uploadFiles('shipment_photos');
+
+  // 2. Upload PDF (Single File)
+  const pdfFile = formData.get('pdf_submission');
+  let pdfUrl = null;
+  if (pdfFile && pdfFile.size > 0) {
+    const blob = await put(pdfFile.name, pdfFile, { access: 'public' });
+    pdfUrl = blob.url;
+  }
 
   try {
     await sql`
@@ -48,7 +57,8 @@ export async function submitShipment(formData) {
         damaged_photos, packing_slip_photos,
         dimensional_report_photos, shipment_photos,
         status, submitted_by_user_id,
-        warehouse_column_cell, original_id_number
+        warehouse_column_cell, original_id_number,
+        pdf_submission
       ) VALUES (
         ${formData.get('delivery_date')},
         ${formData.get('company_id')}, 
@@ -67,7 +77,8 @@ export async function submitShipment(formData) {
         'Received',           
         1,
         ${formData.get('warehouse_column_cell')},
-        ${formData.get('original_id_number')}
+        ${formData.get('original_id_number')},
+        ${pdfUrl}
       )
     `;
   } catch (error) {
@@ -146,7 +157,7 @@ export async function getUsers() {
 }
 
 // ==========================================
-// 3. AUTHENTICATION LOGIC (UPDATED)
+// 3. AUTHENTICATION LOGIC
 // ==========================================
 
 const JWT_SECRET = new TextEncoder().encode('my-super-secret-key-change-this-later');
@@ -170,7 +181,6 @@ export async function activateAccount(formData) {
 
 export async function loginUser(formData) {
   try {
-    // 1. Initialize DB inside the function (Safe Mode)
     const sql = getSql();
     
     const email = formData.get('email');
@@ -207,7 +217,6 @@ export async function loginUser(formData) {
 
   } catch (error) {
     console.error("LOGIN CRASH DETAILS:", error);
-    // This will now show the REAL reason on your screen
     return { success: false, message: `System Error: ${error.message}` };
   }
 }
@@ -274,7 +283,7 @@ export async function getShipments(role, companyId) {
 }
 
 // ==========================================
-// 6. DETAIL & EDIT LOGIC (MASTER SAVE)
+// 6. DETAIL & EDIT LOGIC
 // ==========================================
 
 export async function getShipmentById(id) {

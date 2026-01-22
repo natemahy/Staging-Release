@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Header from '@/app/components/Header'
 import { getShipmentById, addComment, saveShipmentChanges } from '@/app/actions'
-import { ArrowLeft, Send, Save, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, Send, Save, AlertTriangle, FileText } from 'lucide-react'
 import Link from 'next/link'
 
 export default function VendorShipmentDetails() {
@@ -64,7 +64,6 @@ export default function VendorShipmentDetails() {
               <h3 className="font-bold text-slate-900 text-lg border-b pb-2">Shipment Information</h3>
               
               <div className="grid grid-cols-2 gap-4">
-                {/* NEW FIELDS */}
                 <div>
                    <label className="block text-xs text-slate-500 uppercase font-bold mb-1">Warehouse Col Cell</label>
                    <select name="warehouse_column_cell" defaultValue={shipment.warehouse_column_cell} className="w-full p-2 border rounded bg-slate-50 text-gray-900 focus:bg-white outline-none">
@@ -76,7 +75,6 @@ export default function VendorShipmentDetails() {
                 </div>
                 <InputBox label="Original ID #" name="original_id_number" val={shipment.original_id_number} />
 
-                {/* EXISTING FIELDS */}
                 <InputBox label="PO Number" name="po_number" val={shipment.po_number} />
                 <InputBox label="Part Number" name="part_number" val={shipment.part_number} />
                 <InputBox label="Qty Received" name="qty_received" val={shipment.qty_received} />
@@ -110,6 +108,23 @@ export default function VendorShipmentDetails() {
             </div>
           </div>
         </form>
+
+        {/* PDF SECTION */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-6">
+           <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2"><FileText size={20}/> Attached Documents</h3>
+           {shipment.pdf_submission ? (
+             <a 
+               href={shipment.pdf_submission} 
+               target="_blank" 
+               rel="noopener noreferrer"
+               className="flex items-center gap-3 p-4 border rounded-lg bg-red-50 border-red-100 hover:bg-red-100 transition-colors text-red-700 font-bold"
+             >
+               <FileText /> Download PDF Submission
+             </a>
+           ) : (
+             <p className="text-slate-400 text-sm italic">No PDF attached.</p>
+           )}
+        </div>
 
         {/* COMMENTS SECTION */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
