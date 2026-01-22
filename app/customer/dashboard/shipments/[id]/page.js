@@ -4,10 +4,10 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Header from '@/app/components/Header'
 import { getShipmentById, addComment, saveShipmentChanges } from '@/app/actions'
-import { ArrowLeft, Send, Save, AlertTriangle, ShieldCheck, FileText, Camera, Calendar, User, Hash } from 'lucide-react'
+import { ArrowLeft, Send, Save, AlertTriangle, UserCheck, FileText, Camera, User, Hash, Calendar } from 'lucide-react'
 import Link from 'next/link'
 
-export default function AdminShipmentDetails() {
+export default function CustomerShipmentDetails() {
   const params = useParams()
   const [data, setData] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
@@ -27,7 +27,7 @@ export default function AdminShipmentDetails() {
     const formData = new FormData(e.currentTarget)
     await saveShipmentChanges(formData)
     setIsSaving(false)
-    window.location.reload() 
+    window.location.reload()
   }
 
   async function handleComment(e) {
@@ -39,42 +39,34 @@ export default function AdminShipmentDetails() {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-20">
-      <Header role="admin" />
+      <Header role="customer" />
 
       <main className="max-w-6xl mx-auto p-6">
         
-        <Link href="/admin/dashboard" className="flex items-center gap-2 text-slate-500 hover:text-blue-600 mb-6 font-medium">
-          <ArrowLeft size={18} /> Back to Dashboard
+        <Link href="/customer/shipments" className="flex items-center gap-2 text-slate-500 hover:text-blue-600 mb-6 font-medium">
+          <ArrowLeft size={18} /> Back to My Shipments
         </Link>
 
         <form onSubmit={handleSave}>
           <input type="hidden" name="id" value={shipment.id} />
-          <input type="hidden" name="role" value="admin" />
+          <input type="hidden" name="role" value="customer" />
 
-          {/* ADMIN CONTROLS BAR */}
-          <div className="bg-white p-6 rounded-xl shadow-lg border-2 border-purple-100 mb-6">
+          {/* CUSTOMER CONTROLS (EDITABLE) */}
+          <div className="bg-white p-6 rounded-xl shadow-lg border-2 border-green-100 mb-6">
             <div className="flex justify-between items-center mb-4 border-b pb-2">
               <div className="flex items-center gap-2">
-                <ShieldCheck className="text-purple-600" />
-                <h2 className="text-lg font-bold text-slate-900">Admin Controls</h2>
+                <UserCheck className="text-green-600" />
+                <h2 className="text-lg font-bold text-slate-900">My Approval</h2>
               </div>
-              <button disabled={isSaving} className="bg-purple-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-purple-700 flex items-center gap-2 shadow-md">
-                <Save size={18} /> {isSaving ? 'Saving...' : 'Save All Changes'}
+              <button disabled={isSaving} className="bg-green-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-green-700 flex items-center gap-2 shadow-md">
+                <Save size={18} /> {isSaving ? 'Saving...' : 'Update Status'}
               </button>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Vendor Status</label>
-                <select name="status" defaultValue={shipment.status} className="w-full p-2 border rounded bg-slate-50 text-gray-900 font-bold">
-                  <option value="Received">Received</option>
-                  <option value="Complete">Complete</option>
-                  <option value="Invoiced">Invoiced</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Customer Approval</label>
-                <select name="company_status" defaultValue={shipment.company_status || ''} className="w-full p-2 border rounded bg-slate-50 text-gray-900 font-bold">
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Status / Action</label>
+                <select name="company_status" defaultValue={shipment.company_status || ''} className="w-full p-2 border rounded bg-white text-gray-900 font-bold focus:ring-2 focus:ring-green-500">
                   <option value="">Pending Review</option>
                   <option value="Need Delivered">Need Delivered</option>
                   <option value="Delivered">Delivered</option>
@@ -82,8 +74,8 @@ export default function AdminShipmentDetails() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Inspection</label>
-                <select name="company_inspection" defaultValue={shipment.company_inspection || ''} className="w-full p-2 border rounded bg-slate-50 text-gray-900 font-bold">
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Inspection Result</label>
+                <select name="company_inspection" defaultValue={shipment.company_inspection || ''} className="w-full p-2 border rounded bg-white text-gray-900 font-bold focus:ring-2 focus:ring-green-500">
                   <option value="">Pending</option>
                   <option value="Passed">Passed</option>
                   <option value="Failed">Failed</option>
@@ -94,70 +86,53 @@ export default function AdminShipmentDetails() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             
-            {/* COLUMN 1: CUSTOMER INFO & MAIN DATA */}
+            {/* COLUMN 1: MAIN INFO (READ ONLY) */}
             <div className="md:col-span-2 space-y-6">
               
               {/* SECTION: CUSTOMER INFO */}
               <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                 <h3 className="font-bold text-slate-900 text-lg mb-4 flex items-center gap-2 border-b pb-2">
-                  <User className="text-blue-500" size={20} /> Customer Info
+                  <User className="text-blue-500" size={20} /> My Info
                 </h3>
                 <div className="grid grid-cols-2 gap-4">
+                  <DetailBox label="Customer Name" value={shipment.company_name} />
                   <div>
-                    <label className="block text-xs text-slate-500 uppercase font-bold mb-1">Customer Name</label>
-                    <div className="p-3 border rounded bg-slate-100 text-gray-900 font-bold">
-                      {shipment.company_name}
-                    </div>
-                  </div>
-                  <div>
-                     <label className="block text-xs text-slate-500 uppercase font-bold mb-1">Delivery Date</label>
-                     <div className="relative">
-                       <Calendar className="absolute left-3 top-2.5 text-slate-400" size={16} />
-                       <input 
-                          type="date" 
-                          name="delivery_date" 
-                          defaultValue={shipment.delivery_date ? new Date(shipment.delivery_date).toISOString().split('T')[0] : ''} 
-                          className="w-full pl-10 p-2 border rounded bg-white text-gray-900 font-medium"
-                       />
+                     <p className="text-xs text-slate-400 uppercase font-bold mb-1">Delivery Date</p>
+                     <div className="flex items-center gap-2 font-medium text-slate-900">
+                       <Calendar size={16} className="text-slate-400"/>
+                       {shipment.delivery_date ? new Date(shipment.delivery_date).toLocaleDateString() : '-'}
                      </div>
                   </div>
                 </div>
               </div>
 
-              {/* SECTION: SHIPMENT DATA */}
+              {/* SECTION: SHIPMENT DATA (READ ONLY) */}
               <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                 <h3 className="font-bold text-slate-900 text-lg mb-4 flex items-center gap-2 border-b pb-2">
                   <Hash className="text-blue-500" size={20} /> Shipment Details
                 </h3>
                 
                 <div className="grid grid-cols-2 gap-4">
-                  <InputBox label="Custom / Original ID #" name="original_id_number" val={shipment.original_id_number} />
-                  <InputBox label="PO Number" name="po_number" val={shipment.po_number} />
+                  <DetailBox label="Custom / Original ID #" value={shipment.original_id_number} />
+                  <DetailBox label="PO Number" value={shipment.po_number} />
                   
-                  <InputBox label="Part Number" name="part_number" val={shipment.part_number} />
-                  <InputBox label="Qty Received" name="qty_received" val={shipment.qty_received} />
+                  <DetailBox label="Part Number" value={shipment.part_number} />
+                  <DetailBox label="Qty Received" value={shipment.qty_received} />
                   
-                  <InputBox label="Package Type" name="package_type" val={shipment.package_type} />
-                  <InputBox label="Supplier Name" name="supplier_name" val={shipment.supplier_name} />
+                  <DetailBox label="Package Type" value={shipment.package_type} />
+                  <DetailBox label="Supplier Name" value={shipment.supplier_name} />
                   
-                  <InputBox label="Location" name="supplier_location" val={shipment.supplier_location} />
-                  <InputBox label="Warehouse Placement" name="warehouse_placement" val={shipment.warehouse_placement} />
+                  <DetailBox label="Location" value={shipment.supplier_location} />
+                  <DetailBox label="Warehouse Placement" value={shipment.warehouse_placement} />
                   
-                  <div className="col-span-2">
-                    <label className="block text-xs text-slate-500 uppercase font-bold mb-1">Warehouse Column Cell</label>
-                    <select name="warehouse_column_cell" defaultValue={shipment.warehouse_column_cell} className="w-full p-2 border rounded bg-white text-gray-900">
-                        <option value="Heil G2 Sanders">Heil G2 Sanders</option>
-                        <option value="Main Warehouse">Main Warehouse</option>
-                        <option value="Holding Area">Holding Area</option>
-                        <option value="Staging Lane A">Staging Lane A</option>
-                    </select>
-                  </div>
+                  <DetailBox label="Warehouse Column Cell" value={shipment.warehouse_column_cell} />
                 </div>
               </div>
             </div>
 
-            {/* COLUMN 2: DISCUSSION & STATUS */}
+            {/* COLUMN 2: DISCUSSION & DOCUMENTS */}
             <div className="space-y-6">
+              
               {/* PDF SECTION */}
               <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                 <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2"><FileText size={20}/> Documents</h3>
@@ -181,7 +156,7 @@ export default function AdminShipmentDetails() {
                 </div>
                 <form onSubmit={handleComment} className="flex gap-2">
                   <input type="hidden" name="shipment_id" value={shipment.id} />
-                  <input name="message" required placeholder="Add note..." className="flex-1 border rounded px-3 py-2 text-sm text-gray-900" />
+                  <input name="message" required placeholder="Ask a question..." className="flex-1 border rounded px-3 py-2 text-sm text-gray-900" />
                   <button className="bg-blue-600 text-white p-2 rounded"><Send size={16}/></button>
                 </form>
               </div>
@@ -189,7 +164,7 @@ export default function AdminShipmentDetails() {
           </div>
         </form>
 
-        {/* SECTION: PHOTO GALLERY (ALL PHOTOS) */}
+        {/* SECTION: PHOTO GALLERY */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mt-6">
            <h3 className="font-bold text-slate-900 mb-6 flex items-center gap-2 text-xl border-b pb-4">
              <Camera className="text-blue-500" /> Photo Gallery
@@ -218,15 +193,11 @@ export default function AdminShipmentDetails() {
 
 // --- HELPER COMPONENTS ---
 
-function InputBox({ label, name, val }) {
+function DetailBox({ label, value }) {
   return (
     <div>
-      <label className="block text-xs text-slate-500 uppercase font-bold mb-1">{label}</label>
-      <input 
-        name={name} 
-        defaultValue={val} 
-        className="w-full p-2 border rounded bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none"
-      />
+      <p className="text-xs text-slate-400 uppercase font-bold mb-1">{label}</p>
+      <p className="font-medium text-slate-900 break-words">{value || '-'}</p>
     </div>
   )
 }

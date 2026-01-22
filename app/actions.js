@@ -222,7 +222,7 @@ export async function loginUser(formData) {
 }
 
 // ==========================================
-// 4. DASHBOARD STATS LOGIC (UPDATED)
+// 4. DASHBOARD STATS LOGIC
 // ==========================================
 
 export async function getDashboardStats(role, companyId) {
@@ -238,8 +238,7 @@ export async function getDashboardStats(role, companyId) {
   const invoiced6MonthsCount = await sql`SELECT COUNT(*) FROM shipments WHERE status = 'Invoiced' AND created_at > NOW() - INTERVAL '6 months' ${companyFilter}`;
   const damagedCount = await sql`SELECT COUNT(*) FROM shipments WHERE quality_check = 'Damaged' ${companyFilter}`;
 
-  // 2. Real Graph Data (Monthly Volume for last 6 months)
-  // Note: We use TO_CHAR to format month names
+  // 2. Real Graph Data
   const graphData = await sql`
     SELECT TO_CHAR(created_at, 'Mon') as name, COUNT(*)::int as total
     FROM shipments
@@ -249,9 +248,7 @@ export async function getDashboardStats(role, companyId) {
     ORDER BY DATE_TRUNC('month', created_at) ASC
   `;
 
-  // 3. Recent Comments (With PO and Company Name)
-  // ... inside getDashboardStats ...
-
+  // 3. Recent Comments (With PO, Company, & ID)
   const recentComments = await sql`
     SELECT 
       comments.message, 
@@ -265,7 +262,7 @@ export async function getDashboardStats(role, companyId) {
     LEFT JOIN shipments ON comments.shipment_id = shipments.id
     LEFT JOIN companies ON shipments.company_id = companies.id
     WHERE 1=1 ${companyFilter} 
-    AND shipments.id IS NOT NULL  -- <--- ADD THIS LINE (Fixes broken links)
+    AND shipments.id IS NOT NULL
     ORDER BY comments.created_at DESC 
     LIMIT 6
   `;
@@ -276,7 +273,7 @@ export async function getDashboardStats(role, companyId) {
     readyToInvoice: completeCount[0]?.count || 0,
     invoiced: invoiced6MonthsCount[0]?.count || 0,
     damaged: damagedCount[0]?.count || 0,
-    graph: graphData || [], // Real data
+    graph: graphData || [],
     comments: recentComments || []
   };
 }
@@ -400,8 +397,22 @@ export async function saveShipmentChanges(formData) {
       WHERE id = ${id}
     `;
   }
+  // --- NEW: CUSTOMER LOGIC ---
+  else if (role === 'customer') {
+    const companyStatus = formData.get('company_status');
+    const inspection = formData.get('company_inspection');
 
+    await sql`
+      UPDATE shipments SET 
+        company_status = ${companyStatus},
+        company_inspection = ${inspection}
+      WHERE id = ${id}
+    `;
+  }
+
+  // Refresh all paths to be safe
   revalidatePath(`/vendor/shipments/${id}`);
   revalidatePath(`/admin/shipments/${id}`);
+  revalidatePath(`/customer/shipments/${id}`);
   revalidatePath(`/admin/dashboard`);
 }
