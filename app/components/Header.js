@@ -1,62 +1,61 @@
 'use client'
+
 import Link from 'next/link'
-import { LogOut, LayoutDashboard, Package, Truck, Shield, PlusCircle } from 'lucide-react'
+import { usePathname } from 'next/navigation'
+import { LogOut, Package, Truck, Home } from 'lucide-react'
 
 export default function Header({ role }) {
-  const safeRole = role || 'vendor'; 
+  const pathname = usePathname()
 
   return (
-    <div className="bg-slate-900 text-white p-4 shadow-lg flex justify-between items-center sticky top-0 z-50">
-      <div className="font-bold text-xl flex items-center gap-2">
-        <Package className="text-blue-400" /> 
-        Receiving & Staging Portal 
-        <span className={`text-xs px-2 py-1 rounded uppercase ${safeRole === 'admin' ? 'bg-purple-600' : 'bg-blue-600'}`}>
-          {safeRole}
-        </span>
-      </div>
-
-      <nav className="hidden md:flex gap-6 text-sm font-medium">
+    <header className="bg-slate-900 text-white shadow-md">
+      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         
-        {/* ADMIN LINKS */}
-        {safeRole === 'admin' && (
-          <>
-            <Link href="/admin/dashboard" className="flex items-center gap-1 hover:text-purple-300 transition-colors">
-              <Shield size={16} /> Dashboard
-            </Link>
-            <Link href="/admin/users" className="flex items-center gap-1 hover:text-purple-300 transition-colors">
-              <Shield size={16} /> Users
-            </Link>
-            <Link href="/admin/add-shipment" className="flex items-center gap-1 hover:text-purple-300 transition-colors">
-              <PlusCircle size={16} /> Add Shipment
-            </Link>
-          </>
-        )}
+        {/* LOGO AREA */}
+        <div className="font-bold text-xl tracking-wide flex items-center gap-2">
+          <Package className="text-blue-400" />
+          <span>PORTAL<span className="text-blue-400">SYNC</span></span>
+        </div>
 
-        {/* VENDOR/CUSTOMER LINKS */}
-        {safeRole !== 'admin' && (
-          <>
-            <Link href={`/${safeRole}/dashboard`} className="flex items-center gap-1 hover:text-blue-300 transition-colors">
-              <LayoutDashboard size={16} /> Dashboard
-            </Link>
-            <Link href={`/${safeRole}/shipments`} className="flex items-center gap-1 hover:text-blue-300 transition-colors">
-              <Package size={16} /> Shipments
-            </Link>
-          </>
-        )}
+        {/* NAVIGATION LINKS */}
+        <nav className="flex items-center gap-6 text-sm font-medium">
+          
+          {/* VENDOR MENU */}
+          {role === 'vendor' && (
+            <>
+              <Link href="/vendor/dashboard" className={pathname === '/vendor/dashboard' ? 'text-blue-400' : 'hover:text-blue-300'}>Dashboard</Link>
+              <Link href="/vendor/check-in" className={pathname === '/vendor/check-in' ? 'text-blue-400' : 'hover:text-blue-300'}>Check-In</Link>
+              <Link href="/vendor/shipments" className={pathname.includes('/vendor/shipments') ? 'text-blue-400' : 'hover:text-blue-300'}>History</Link>
+            </>
+          )}
 
-        {/* VENDOR ONLY */}
-        {safeRole === 'vendor' && (
-          <Link href="/vendor/check-in" className="flex items-center gap-1 hover:text-blue-300 transition-colors">
-            <Truck size={16} /> Check-In
-          </Link>
-        )}
-      </nav>
+          {/* ADMIN MENU */}
+          {role === 'admin' && (
+            <>
+              <Link href="/admin/dashboard" className={pathname === '/admin/dashboard' ? 'text-purple-400' : 'hover:text-purple-300'}>Dashboard</Link>
+              <Link href="/admin/shipments" className={pathname.includes('/admin/shipments') ? 'text-purple-400' : 'hover:text-purple-300'}>All Shipments</Link>
+              <Link href="/admin/users" className={pathname === '/admin/users' ? 'text-purple-400' : 'hover:text-purple-300'}>Users</Link>
+            </>
+          )}
 
-      <div className="flex items-center gap-4">
-        <Link href="/login" className="flex items-center gap-1 text-slate-400 hover:text-white text-xs">
-          <LogOut size={14} /> Sign Out
-        </Link>
+          {/* CUSTOMER MENU (THIS WAS MISSING) */}
+          {role === 'customer' && (
+            <>
+              <Link href="/customer/dashboard" className={pathname === '/customer/dashboard' ? 'text-green-400' : 'hover:text-green-300'}>Dashboard</Link>
+              <Link href="/customer/shipments" className={pathname.includes('/customer/shipments') ? 'text-green-400' : 'hover:text-green-300'}>My Shipments</Link>
+            </>
+          )}
+
+        </nav>
+
+        {/* LOGOUT BUTTON */}
+        <form action="/logout" method="POST">
+           <button className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+             <LogOut size={16} /> <span className="hidden md:inline">Sign Out</span>
+           </button>
+        </form>
+
       </div>
-    </div>
+    </header>
   )
 }
