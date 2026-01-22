@@ -14,7 +14,7 @@ export default function AdminDashboard() {
     getDashboardStats('admin', null).then(setStats)
   }, [])
 
-  if (!stats) return <div className="p-10">Loading Dashboard...</div>
+  if (!stats) return <div className="p-10 text-center font-bold text-slate-500">Loading Dashboard Data...</div>
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -22,32 +22,43 @@ export default function AdminDashboard() {
       
       <main className="max-w-7xl mx-auto p-6 space-y-6">
         
-        {/* TOP STATS ROW */}
+        {/* CLICKABLE STAT CARDS */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <StatCard 
-            title="Active Inventory" 
-            value={stats.active} 
-            icon={<Package className="text-blue-600" />} 
-            color="bg-blue-50 border-blue-100" 
-          />
-          <StatCard 
-            title="Need Delivered" 
-            value={stats.needDelivered} 
-            icon={<Truck className="text-orange-600" />} 
-            color="bg-orange-50 border-orange-100" 
-          />
-           <StatCard 
-            title="Damaged / Issues" 
-            value={stats.damaged} 
-            icon={<AlertTriangle className="text-red-600" />} 
-            color="bg-red-50 border-red-100" 
-          />
-          <StatCard 
-            title="Total Invoiced (6mo)" 
-            value={stats.invoiced} 
-            icon={<CheckCircle className="text-slate-600" />} 
-            color="bg-slate-100 border-slate-200" 
-          />
+          <Link href="/admin/shipments?filter=Active">
+            <StatCard 
+              title="Active Inventory" 
+              value={stats.active} 
+              icon={<Package className="text-blue-600" />} 
+              color="bg-blue-50 border-blue-100 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer" 
+            />
+          </Link>
+          
+          <Link href="/admin/shipments?filter=Need Delivered">
+            <StatCard 
+              title="Need Delivered" 
+              value={stats.needDelivered} 
+              icon={<Truck className="text-orange-600" />} 
+              color="bg-orange-50 border-orange-100 hover:border-orange-300 hover:shadow-md transition-all cursor-pointer" 
+            />
+          </Link>
+
+           <Link href="/admin/shipments?filter=Damaged">
+            <StatCard 
+              title="Damaged / Issues" 
+              value={stats.damaged} 
+              icon={<AlertTriangle className="text-red-600" />} 
+              color="bg-red-50 border-red-100 hover:border-red-300 hover:shadow-md transition-all cursor-pointer" 
+            />
+          </Link>
+          
+          <Link href="/admin/shipments?filter=Invoiced">
+            <StatCard 
+              title="Total Invoiced (6mo)" 
+              value={stats.invoiced} 
+              icon={<CheckCircle className="text-slate-600" />} 
+              color="bg-slate-100 border-slate-200 hover:border-slate-300 hover:shadow-md transition-all cursor-pointer" 
+            />
+          </Link>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -55,16 +66,22 @@ export default function AdminDashboard() {
           {/* REAL DATA CHART */}
           <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <h3 className="text-lg font-bold text-slate-800 mb-4">Monthly Shipment Volume</h3>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats.graph}>
-                  <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis fontSize={12} tickLine={false} axisLine={false} />
-                  <Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
-                  <Bar dataKey="total" fill="#7c3aed" radius={[4, 4, 0, 0]} barSize={40} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            {stats.graph.length > 0 ? (
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={stats.graph}>
+                    <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis fontSize={12} tickLine={false} axisLine={false} />
+                    <Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                    <Bar dataKey="total" fill="#7c3aed" radius={[4, 4, 0, 0]} barSize={40} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-64 flex items-center justify-center text-slate-400 italic">
+                No data available for graph yet.
+              </div>
+            )}
           </div>
 
           {/* RECENT COMMENTS FEED */}

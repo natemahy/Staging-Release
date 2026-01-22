@@ -23,32 +23,43 @@ export default function VendorDashboard() {
       
       <main className="max-w-7xl mx-auto p-6 space-y-6">
         
-        {/* TOP STATS ROW */}
+        {/* CLICKABLE STAT CARDS */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <StatCard 
-            title="Active Inventory" 
-            value={stats.active} 
-            icon={<Package className="text-blue-600" />} 
-            color="bg-blue-50 border-blue-100" 
-          />
-          <StatCard 
-            title="Ready to Invoice" 
-            value={stats.readyToInvoice} 
-            icon={<CheckCircle className="text-green-600" />} 
-            color="bg-green-50 border-green-100" 
-          />
-           <StatCard 
-            title="Damaged / Issues" 
-            value={stats.damaged} 
-            icon={<AlertTriangle className="text-red-600" />} 
-            color="bg-red-50 border-red-100" 
-          />
-          <StatCard 
-            title="Total Invoiced (6mo)" 
-            value={stats.invoiced} 
-            icon={<Truck className="text-slate-600" />} 
-            color="bg-slate-100 border-slate-200" 
-          />
+          <Link href="/vendor/shipments?filter=Active">
+            <StatCard 
+              title="Active Inventory" 
+              value={stats.active} 
+              icon={<Package className="text-blue-600" />} 
+              color="bg-blue-50 border-blue-100 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer" 
+            />
+          </Link>
+          
+          <Link href="/vendor/shipments?filter=Complete">
+            <StatCard 
+              title="Ready to Invoice" 
+              value={stats.readyToInvoice} 
+              icon={<CheckCircle className="text-green-600" />} 
+              color="bg-green-50 border-green-100 hover:border-green-300 hover:shadow-md transition-all cursor-pointer" 
+            />
+          </Link>
+
+          <Link href="/vendor/shipments?filter=Damaged">
+             <StatCard 
+              title="Damaged / Issues" 
+              value={stats.damaged} 
+              icon={<AlertTriangle className="text-red-600" />} 
+              color="bg-red-50 border-red-100 hover:border-red-300 hover:shadow-md transition-all cursor-pointer" 
+            />
+          </Link>
+
+          <Link href="/vendor/shipments?filter=Invoiced">
+            <StatCard 
+              title="Total Invoiced (6mo)" 
+              value={stats.invoiced} 
+              icon={<Truck className="text-slate-600" />} 
+              color="bg-slate-100 border-slate-200 hover:border-slate-300 hover:shadow-md transition-all cursor-pointer" 
+            />
+          </Link>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

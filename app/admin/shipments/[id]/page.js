@@ -1,192 +1,171 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
-import Header from '@/app/components/Header'
-import { getShipmentById, addComment, saveShipmentChanges } from '@/app/actions'
-import { ArrowLeft, Send, Save, AlertTriangle, ShieldCheck, FileText } from 'lucide-react'
+import { useEffect, useState, useMemo } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { Search, Filter, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
+import { getShipments } from '@/app/actions'
+import Header from '@/app/components/Header'
 
-export default function AdminShipmentDetails() {
-  const params = useParams()
-  const [data, setData] = useState(null)
-  const [isSaving, setIsSaving] = useState(false)
+export default function AdminShipments() {
+  const [data, setData] = useState([])
+  const [search, setSearch] = useState('')
+  const [loading, setLoading] = useState(true)
+  const searchParams = useSearchParams()
+  const initialFilter = searchParams.get('filter') // Read URL (e.g., ?filter=Damaged)
+
+  // Sorting State
+  const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' })
 
   useEffect(() => {
-    getShipmentById(params.id).then(setData)
-  }, [params.id])
+    getShipments('admin').then(serverData => {
+      setData(serverData)
+      // Set initial search if coming from dashboard
+      if (initialFilter) setSearch(initialFilter === 'Active' ? '' : initialFilter)
+      setLoading(false)
+    })
+  }, [initialFilter])
 
- if (!data) return <div className="p-8 text-center">Loading...</div>
-  const { shipment, comments } = data
+  // --- SORT & FILTER LOGIC ---
+  const filteredData = useMemo(() => {
+    let processed = [...data]
 
-  // --- NEW: SAFETY CHECK ---
-  if (!shipment) {
-    return (
-      <div className="p-20 text-center">
-        <h2 className="text-2xl font-bold text-slate-800 mb-4">Shipment Not Found</h2>
-        <p className="text-slate-500 mb-6">This shipment may have been deleted.</p>
-        <Link href="/admin/dashboard" className="bg-blue-600 text-white px-6 py-3 rounded-lg font-bold">
-          Back to Dashboard
-        </Link>
+    // 1. Special "Active" Filter logic (Shows everything NOT invoiced)
+    if (initialFilter === 'Active' && search === '') {
+      processed = processed.filter(item => item.status !== 'Invoiced')
+    }
+    // 2. General Search (Checks ALL fields)
+    else if (search) {
+      const lowerSearch = search.toLowerCase()
+      processed = processed.filter(item => 
+        Object.values(item).some(val => 
+          String(val).toLowerCase().includes(lowerSearch)
+        )
+      )
+    }
+
+    // 3. Sorting
+    if (sortConfig.key) {
+      processed.sort((a, b) => {
+        if (a[sortConfig.key] < b[sortConfig.key]) return sortConfig.direction === 'asc' ? -1 : 1
+        if (a[sortConfig.key] > b[sortConfig.key]) return sortConfig.direction === 'asc' ? 1 : -1
+        return 0
+      })
+    }
+
+    return processed
+  }, [data, search, sortConfig, initialFilter])
+
+  const requestSort = (key) => {
+    let direction = 'asc'
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc'
+    }
+    setSortConfig({ key, direction })
+  }
+
+  // Helper for Column Headers
+  const SortableHeader = ({ label, sortKey }) => (
+    <th 
+      onClick={() => requestSort(sortKey)} 
+      className="p-4 text-left font-bold text-slate-500 uppercase text-xs cursor-pointer hover:bg-slate-100 hover:text-blue-600 transition-colors select-none"
+    >
+      <div className="flex items-center gap-1">
+        {label}
+        {sortConfig.key === sortKey ? (
+          sortConfig.direction === 'asc' ? <ArrowUp size={14}/> : <ArrowDown size={14}/>
+        ) : (
+          <ArrowUpDown size={14} className="text-slate-300"/>
+        )}
       </div>
-    )
-  }
-  // ------------------------
+    </th>
+  )
 
-  async function handleSave(e) {
-    e.preventDefault()
-    setIsSaving(true)
-    const formData = new FormData(e.currentTarget)
-    await saveShipmentChanges(formData)
-    setIsSaving(false)
-    window.location.reload() 
-  }
-
-  async function handleComment(e) {
-    e.preventDefault()
-    const formData = new FormData(e.currentTarget)
-    await addComment(formData)
-    window.location.reload()
-  }
+  if (loading) return <div className="p-10 text-center text-slate-500">Loading shipments...</div>
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-20">
+    <div className="min-h-screen bg-slate-50">
       <Header role="admin" />
-
-      <main className="max-w-6xl mx-auto p-6">
-        
-        <Link href="/admin/dashboard" className="flex items-center gap-2 text-slate-500 hover:text-blue-600 mb-6 font-medium">
-          <ArrowLeft size={18} /> Back to Dashboard
-        </Link>
-
-        {/* ONE GIANT FORM FOR EVERYTHING */}
-        <form onSubmit={handleSave}>
-          <input type="hidden" name="id" value={shipment.id} />
-          <input type="hidden" name="role" value="admin" />
-
-          {/* TOP CONTROLS */}
-          <div className="bg-white p-6 rounded-xl shadow-lg border-2 border-purple-100 mb-8">
-            <div className="flex justify-between items-center mb-4 border-b pb-2">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="text-purple-600" />
-                <h2 className="text-lg font-bold text-slate-900">Admin Controls</h2>
-              </div>
-              <button disabled={isSaving} className="bg-purple-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-purple-700 flex items-center gap-2 shadow-md">
-                <Save size={18} /> {isSaving ? 'Saving...' : 'Save All Changes'}
-              </button>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Vendor Status</label>
-                <select name="status" defaultValue={shipment.status} className="w-full p-2 border rounded bg-slate-50 text-gray-900">
-                  <option value="Received">Received</option>
-                  <option value="Complete">Complete</option>
-                  <option value="Invoiced">Invoiced</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Customer Approval</label>
-                <select name="company_status" defaultValue={shipment.company_status || ''} className="w-full p-2 border rounded bg-slate-50 text-gray-900">
-                  <option value="">Pending Review</option>
-                  <option value="Need Delivered">Need Delivered</option>
-                  <option value="Delivered">Delivered</option>
-                  <option value="Rejected">Rejected</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Inspection</label>
-                <select name="company_inspection" defaultValue={shipment.company_inspection || ''} className="w-full p-2 border rounded bg-slate-50 text-gray-900">
-                  <option value="">Pending</option>
-                  <option value="Passed">Passed</option>
-                  <option value="Failed">Failed</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* EDITABLE SHIPMENT DATA */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div className="md:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
-              <h3 className="font-bold text-slate-900 text-lg">Shipment Data (Editable)</h3>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                   <label className="block text-xs text-slate-500 uppercase font-bold mb-1">Warehouse Col Cell</label>
-                   <select name="warehouse_column_cell" defaultValue={shipment.warehouse_column_cell} className="w-full p-2 border rounded bg-slate-50 text-gray-900 focus:bg-white outline-none">
-                      <option value="Heil G2 Sanders">Heil G2 Sanders</option>
-                      <option value="Main Warehouse">Main Warehouse</option>
-                      <option value="Holding Area">Holding Area</option>
-                      <option value="Staging Lane A">Staging Lane A</option>
-                   </select>
-                </div>
-                <InputBox label="Original ID #" name="original_id_number" val={shipment.original_id_number} />
-
-                <InputBox label="PO Number" name="po_number" val={shipment.po_number} />
-                <InputBox label="Part Number" name="part_number" val={shipment.part_number} />
-                <InputBox label="Qty Received" name="qty_received" val={shipment.qty_received} />
-                <InputBox label="Package Type" name="package_type" val={shipment.package_type} />
-                <InputBox label="Supplier Name" name="supplier_name" val={shipment.supplier_name} />
-                <InputBox label="Location" name="supplier_location" val={shipment.supplier_location} />
-                <InputBox label="Warehouse Placement" name="warehouse_placement" val={shipment.warehouse_placement} />
-                
-                <div className="col-span-2 mt-2">
-                   <p className="text-xs text-slate-400 uppercase font-bold mb-1">Quality Check (Photo Evidence)</p>
-                   {shipment.quality_check === 'Damaged' ? (
-                     <span className="flex items-center gap-2 text-red-600 font-bold bg-red-50 p-2 rounded"><AlertTriangle size={16}/> Marked as Damaged</span>
-                   ) : (
-                     <span className="text-green-600 font-bold bg-green-50 p-2 rounded">Marked as Good</span>
-                   )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </form>
-
-        {/* COMMENTS SECTION */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-6">
-           <h3 className="font-bold text-slate-900 mb-4">Discussion Log</h3>
-           <div className="space-y-3 mb-4 max-h-60 overflow-y-auto">
-             {comments.map(c => (
-               <div key={c.id} className="bg-slate-50 p-2 rounded border text-sm">
-                 <p className="text-xs font-bold text-blue-600">{c.email}</p>
-                 <p className="text-slate-700">{c.message}</p>
-               </div>
-             ))}
-           </div>
-           <form onSubmit={handleComment} className="flex gap-2">
-             <input type="hidden" name="shipment_id" value={shipment.id} />
-             <input name="message" required placeholder="Add a note..." className="flex-1 border rounded px-3 py-2 text-sm text-gray-900" />
-             <button className="bg-blue-600 text-white p-2 rounded"><Send size={16}/></button>
-           </form>
+      
+      <main className="max-w-7xl mx-auto p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-slate-900">Shipment Management</h1>
+          <Link href="/admin/add-shipment" className="bg-purple-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-purple-700 shadow-md">
+            + Manual Entry
+          </Link>
         </div>
 
-        {/* PDF SECTION */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-6">
-           <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2"><FileText size={20}/> Attached Documents</h3>
-           {shipment.pdf_submission ? (
-             <a 
-               href={shipment.pdf_submission} 
-               target="_blank" 
-               rel="noopener noreferrer"
-               className="flex items-center gap-3 p-4 border rounded-lg bg-red-50 border-red-100 hover:bg-red-100 transition-colors text-red-700 font-bold"
-             >
-               <FileText /> Download PDF Submission
-             </a>
-           ) : (
-             <p className="text-slate-400 text-sm italic">No PDF attached.</p>
-           )}
+        {/* SEARCH BAR */}
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 flex gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-3 text-slate-400" size={20} />
+            <input 
+              type="text" 
+              placeholder="Search by PO, Company, Part #, or Status..." 
+              className="w-full pl-10 pr-4 py-2 border rounded-lg bg-slate-50 focus:bg-white focus:ring-2 focus:ring-purple-500 outline-none transition-all"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          {initialFilter && (
+            <button onClick={() => window.location.href = '/admin/shipments'} className="px-4 py-2 text-sm font-bold text-slate-500 hover:text-red-500 bg-slate-100 rounded-lg">
+              Clear Filter: {initialFilter}
+            </button>
+          )}
         </div>
 
-        {/* IMAGES */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-           <h3 className="font-bold text-slate-900 mb-4">Photos</h3>
-           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-             {shipment.damaged_photos?.map((url, i) => (
-               <img key={i} src={url} className="w-full h-32 object-cover rounded border" />
-             ))}
-             {!shipment.damaged_photos && <p className="text-slate-400 text-sm">No photos available.</p>}
-           </div>
+        {/* DATA TABLE */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <SortableHeader label="Date" sortKey="delivery_date" />
+                  <SortableHeader label="Company" sortKey="company_name" />
+                  <SortableHeader label="PO Number" sortKey="po_number" />
+                  <SortableHeader label="Part #" sortKey="part_number" />
+                  <SortableHeader label="Qty" sortKey="qty_received" />
+                  <SortableHeader label="Status" sortKey="status" />
+                  <SortableHeader label="Cust. Approval" sortKey="company_status" />
+                  <th className="p-4"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredData.map((s) => (
+                  <tr key={s.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                    <td className="p-4 text-sm text-slate-600 font-medium">{new Date(s.delivery_date).toLocaleDateString()}</td>
+                    <td className="p-4 text-sm font-bold text-slate-900">{s.company_name}</td>
+                    <td className="p-4 text-sm text-slate-600">{s.po_number}</td>
+                    <td className="p-4 text-sm text-slate-600">{s.part_number}</td>
+                    <td className="p-4 text-sm text-slate-600">{s.qty_received}</td>
+                    
+                    <td className="p-4">
+                      <StatusBadge status={s.status} />
+                    </td>
+                    <td className="p-4">
+                       <span className={`text-xs font-bold px-2 py-1 rounded ${
+                         s.company_status === 'Need Delivered' ? 'bg-orange-100 text-orange-700' :
+                         s.company_status === 'Delivered' ? 'bg-green-100 text-green-700' :
+                         'bg-slate-100 text-slate-500'
+                       }`}>
+                         {s.company_status || 'Pending'}
+                       </span>
+                    </td>
+                    <td className="p-4 text-right">
+                      <Link href={`/admin/shipments/${s.id}`} className="text-purple-600 font-bold text-sm hover:underline">
+                        Manage &rarr;
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+                {filteredData.length === 0 && (
+                   <tr>
+                     <td colSpan="8" className="p-8 text-center text-slate-400">No shipments found.</td>
+                   </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
       </main>
@@ -194,15 +173,15 @@ export default function AdminShipmentDetails() {
   )
 }
 
-function InputBox({ label, name, val }) {
+function StatusBadge({ status }) {
+  const styles = {
+    'Received': 'bg-blue-100 text-blue-700',
+    'Complete': 'bg-green-100 text-green-700',
+    'Invoiced': 'bg-slate-100 text-slate-600',
+  }
   return (
-    <div>
-      <label className="block text-xs text-slate-500 uppercase font-bold mb-1">{label}</label>
-      <input 
-        name={name} 
-        defaultValue={val} 
-        className="w-full p-2 border rounded bg-slate-50 text-gray-900 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-      />
-    </div>
+    <span className={`px-3 py-1 rounded-full text-xs font-bold ${styles[status] || 'bg-gray-100 text-gray-600'}`}>
+      {status}
+    </span>
   )
 }
