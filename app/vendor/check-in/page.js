@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Camera, CheckCircle, AlertTriangle } from 'lucide-react'
+import { Camera, CheckCircle, AlertTriangle, FileText } from 'lucide-react'
 import { submitShipment, getCompanies } from '@/app/actions'
 import Header from '@/app/components/Header'
 import Link from 'next/link'
 
 export default function VendorCheckIn() {
   const [status, setStatus] = useState('idle')
+  const [errorMessage, setErrorMessage] = useState('') // <--- NEW STATE
   const [isDamaged, setIsDamaged] = useState(false)
   const [companies, setCompanies] = useState([])
 
@@ -18,6 +19,8 @@ export default function VendorCheckIn() {
   async function handleSubmit(event) {
     event.preventDefault()
     setStatus('submitting')
+    setErrorMessage('') // Reset error
+    
     const formData = new FormData(event.currentTarget)
     try {
       await submitShipment(formData)
@@ -25,6 +28,8 @@ export default function VendorCheckIn() {
     } catch (e) {
       console.error(e)
       setStatus('error')
+      // Capture the actual error message from the server
+      setErrorMessage(e.message || "An unexpected error occurred.") 
     }
   }
 
@@ -100,7 +105,6 @@ export default function VendorCheckIn() {
             <input type="text" name="supplier_location" className="w-full p-3 border rounded-lg text-gray-900" />
           </div>
 
-          {/* NEW FIELDS ADDED HERE */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Warehouse Column Cell</label>
@@ -167,12 +171,33 @@ export default function VendorCheckIn() {
             <FileUpload label="Packing Slip" name="packing_slip_photos" />
             <FileUpload label="Dimensional Report" name="dimensional_report_photos" />
             <FileUpload label="Shipment Overview" name="shipment_photos" />
+
+            {/* NEW PDF FIELD */}
+            <div className="bg-slate-50 p-3 rounded-lg border">
+              <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
+                <FileText size={16} className="text-red-500" /> PDF Submission
+              </label>
+              <input 
+                type="file" 
+                name="pdf_submission" 
+                accept=".pdf"
+                className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100" 
+              />
+            </div>
           </div>
+
+          {/* NEW ERROR DISPLAY */}
+          {status === 'error' && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+              <div className="font-bold flex items-center gap-2"><AlertTriangle size={16}/> Submission Failed</div>
+              <p className="text-sm">{errorMessage}</p>
+            </div>
+          )}
 
           <button 
             type="submit" 
             disabled={status === 'submitting'}
-            className="w-full bg-blue-600 text-white p-4 rounded-xl font-bold text-lg shadow-lg hover:bg-blue-700 transition-colors"
+            className="w-full bg-blue-600 text-white p-4 rounded-xl font-bold text-lg shadow-lg hover:bg-blue-700 transition-colors disabled:bg-blue-400"
           >
             {status === 'submitting' ? 'Submitting...' : 'Complete Check-In'}
           </button>
