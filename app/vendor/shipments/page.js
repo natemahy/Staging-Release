@@ -1,16 +1,19 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Search, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import { getShipments } from '@/app/actions'
 import Header from '@/app/components/Header'
 
-export default function VendorShipments() {
+// --- 1. THE MAIN LOGIC COMPONENT ---
+function ShipmentsTable() {
   const [data, setData] = useState([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
+  
+  // This hook causes the build error if not wrapped in Suspense
   const searchParams = useSearchParams()
   const initialFilter = searchParams.get('filter')
 
@@ -77,10 +80,7 @@ export default function VendorShipments() {
   if (loading) return <div className="p-10 text-center text-slate-500">Loading shipments...</div>
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Header role="vendor" />
-      
-      <main className="max-w-7xl mx-auto p-6">
+    <main className="max-w-7xl mx-auto p-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-slate-900">Shipment History</h1>
           <Link href="/vendor/check-in" className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-700 shadow-md">
@@ -164,8 +164,18 @@ export default function VendorShipments() {
             </table>
           </div>
         </div>
+    </main>
+  )
+}
 
-      </main>
+// --- 2. THE PAGE WRAPPER (Fixes the Build Error) ---
+export default function VendorShipments() {
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <Header role="vendor" />
+      <Suspense fallback={<div className="p-10 text-center">Loading filters...</div>}>
+        <ShipmentsTable />
+      </Suspense>
     </div>
   )
 }
