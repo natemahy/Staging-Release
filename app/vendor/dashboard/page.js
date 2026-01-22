@@ -1,100 +1,127 @@
 'use client'
+
 import { useEffect, useState } from 'react'
-import Header from '@/app/components/Header'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { Package, Truck, CheckCircle, AlertTriangle } from 'lucide-react'
 import { getDashboardStats } from '@/app/actions'
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
-import { MessageSquare } from 'lucide-react'
+import Header from '@/app/components/Header'
+import Link from 'next/link'
 
 export default function VendorDashboard() {
   const [stats, setStats] = useState(null)
 
   useEffect(() => {
-    // Vendor sees all (pass null for companyId)
+    // Role 'vendor' with no company filter sees all
     getDashboardStats('vendor', null).then(setStats)
   }, [])
 
-  if (!stats) return <div className="p-8">Loading Dashboard...</div>
-
-  // Simple Trend Data (Mocked for visual)
-  const trendData = [
-    { name: 'Jan', items: 40 },
-    { name: 'Feb', items: 30 },
-    { name: 'Mar', items: 20 },
-    { name: 'Apr', items: 27 },
-    { name: 'May', items: 18 },
-    { name: 'Jun', items: parseInt(stats.active) + 10 },
-  ]
+  if (!stats) return <div className="p-10 text-center font-bold text-slate-500">Loading Dashboard Data...</div>
 
   return (
     <div className="min-h-screen bg-slate-50">
       <Header role="vendor" />
       
-      <main className="max-w-7xl mx-auto p-8 space-y-8">
+      <main className="max-w-7xl mx-auto p-6 space-y-6">
         
-        {/* METRICS */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <StatBox label="Total Checked In" value={stats.active} color="bg-slate-800" />
-          <StatBox label="Pending Delivery" value={stats.needDelivered} color="bg-orange-600" />
-          <StatBox label="Need Invoicing" value={stats.readyToInvoice} color="bg-blue-600" />
-          {/* UPDATED LABEL BELOW */}
-          <StatBox label="Invoiced (6mo)" value={stats.invoiced} color="bg-green-600" />
+        {/* TOP STATS ROW */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <StatCard 
+            title="Active Inventory" 
+            value={stats.active} 
+            icon={<Package className="text-blue-600" />} 
+            color="bg-blue-50 border-blue-100" 
+          />
+          <StatCard 
+            title="Ready to Invoice" 
+            value={stats.readyToInvoice} 
+            icon={<CheckCircle className="text-green-600" />} 
+            color="bg-green-50 border-green-100" 
+          />
+           <StatCard 
+            title="Damaged / Issues" 
+            value={stats.damaged} 
+            icon={<AlertTriangle className="text-red-600" />} 
+            color="bg-red-50 border-red-100" 
+          />
+          <StatCard 
+            title="Total Invoiced (6mo)" 
+            value={stats.invoiced} 
+            icon={<Truck className="text-slate-600" />} 
+            color="bg-slate-100 border-slate-200" 
+          />
         </div>
 
-        {/* GRAPH: Incoming Volume */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-          <h3 className="text-lg font-bold text-slate-800 mb-4">Check-In Volume (Trend)</h3>
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={trendData}>
-                <defs>
-                  <linearGradient id="colorItems" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="name" stroke="#94a3b8" />
-                <YAxis stroke="#94a3b8" />
-                <Tooltip />
-                <Area type="monotone" dataKey="items" stroke="#3b82f6" fillOpacity={1} fill="url(#colorItems)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* RECENT COMMENTS */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-          <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-            <MessageSquare className="text-slate-400"/> Recent Activity
-          </h3>
-          <div className="space-y-4">
-             {stats.comments.length === 0 ? (
-              <p className="text-slate-400 italic">No recent comments found.</p>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          {/* REAL DATA CHART */}
+          <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <h3 className="text-lg font-bold text-slate-800 mb-4">Monthly Shipment Volume</h3>
+            {stats.graph.length > 0 ? (
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={stats.graph}>
+                    <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis fontSize={12} tickLine={false} axisLine={false} />
+                    <Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                    <Bar dataKey="total" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={40} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             ) : (
-              stats.comments.map((c, i) => (
-                <div key={i} className="flex gap-4 p-3 bg-slate-50 rounded-lg border border-slate-100">
-                  <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-700 font-bold">
-                    {c.email.substring(0,2).toUpperCase()}
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-slate-900">User: {c.email}</p>
-                    <p className="text-sm text-slate-600">"{c.message}"</p>
-                  </div>
-                </div>
-              ))
+              <div className="h-64 flex items-center justify-center text-slate-400 italic">
+                No data available for graph yet.
+              </div>
             )}
           </div>
-        </div>
 
+          {/* RECENT COMMENTS FEED */}
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <h3 className="text-lg font-bold text-slate-800 mb-4">Recent Comments</h3>
+            <div className="space-y-4">
+              {stats.comments.map((c, i) => (
+                <Link 
+                  href={`/vendor/shipments/${c.shipment_id}`} 
+                  key={i} 
+                  className="block p-3 bg-slate-50 rounded-lg border border-slate-100 hover:bg-blue-50 hover:border-blue-200 transition-colors group"
+                >
+                  <div className="flex justify-between items-start mb-1">
+                    <span className="text-xs font-bold text-blue-600 group-hover:text-blue-700">
+                      {c.email.split('@')[0]}
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      {new Date(c.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                  
+                  {/* Context Row: Company & PO */}
+                  <div className="flex gap-2 text-xs font-bold text-slate-600 mb-2">
+                    <span className="bg-slate-200 px-1.5 py-0.5 rounded text-slate-700">{c.company_name || 'Unassigned'}</span>
+                    <span className="bg-slate-200 px-1.5 py-0.5 rounded text-slate-700">PO: {c.po_number || 'N/A'}</span>
+                  </div>
+
+                  <p className="text-sm text-slate-700 line-clamp-2">"{c.message}"</p>
+                </Link>
+              ))}
+              {stats.comments.length === 0 && (
+                <p className="text-slate-400 text-sm text-center py-4">No recent comments.</p>
+              )}
+            </div>
+          </div>
+
+        </div>
       </main>
     </div>
   )
 }
 
-function StatBox({ label, value, color }) {
+function StatCard({ title, value, icon, color }) {
   return (
-    <div className={`${color} p-6 rounded-xl shadow-lg text-white transform hover:scale-105 transition-transform`}>
-      <p className="text-xs opacity-80 font-bold uppercase tracking-wider">{label}</p>
-      <p className="text-3xl font-bold mt-1">{value}</p>
+    <div className={`p-6 rounded-xl border ${color} shadow-sm`}>
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-slate-500 font-medium text-sm">{title}</span>
+        {icon}
+      </div>
+      <div className="text-3xl font-bold text-slate-800">{value}</div>
     </div>
   )
 }

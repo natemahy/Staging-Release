@@ -222,29 +222,52 @@ export async function loginUser(formData) {
 }
 
 // ==========================================
-// 4. DASHBOARD STATS LOGIC
+// 4. DASHBOARD STATS LOGIC (UPDATED)
 // ==========================================
 
 export async function getDashboardStats(role, companyId) {
   const sql = getSql();
   const companyFilter = (role === 'customer' && companyId) 
-    ? sql`AND company_id = ${companyId}` 
+    ? sql`AND shipments.company_id = ${companyId}` 
     : sql``;
 
+  // 1. Key Counts
   const activeCount = await sql`SELECT COUNT(*) FROM shipments WHERE status != 'Invoiced' ${companyFilter}`;
   const needDeliveredCount = await sql`SELECT COUNT(*) FROM shipments WHERE company_status = 'Need Delivered' ${companyFilter}`;
   const completeCount = await sql`SELECT COUNT(*) FROM shipments WHERE status = 'Complete' ${companyFilter}`;
   const invoiced6MonthsCount = await sql`SELECT COUNT(*) FROM shipments WHERE status = 'Invoiced' AND created_at > NOW() - INTERVAL '6 months' ${companyFilter}`;
   const damagedCount = await sql`SELECT COUNT(*) FROM shipments WHERE quality_check = 'Damaged' ${companyFilter}`;
 
+  // 2. Real Graph Data (Monthly Volume for last 6 months)
+  // Note: We use TO_CHAR to format month names
+  const graphData = await sql`
+    SELECT TO_CHAR(created_at, 'Mon') as name, COUNT(*)::int as total
+    FROM shipments
+    WHERE created_at > NOW() - INTERVAL '6 months'
+    ${companyFilter}
+    GROUP BY TO_CHAR(created_at, 'Mon'), DATE_TRUNC('month', created_at)
+    ORDER BY DATE_TRUNC('month', created_at) ASC
+  `;
+
+  // 3. Recent Comments (With PO and Company Name)
+  // ... inside getDashboardStats ...
+
   const recentComments = await sql`
-    SELECT comments.message, users.email, comments.created_at 
+    SELECT 
+      comments.message, 
+      comments.created_at, 
+      users.email, 
+      shipments.id as shipment_id, 
+      shipments.po_number, 
+      companies.name as company_name
     FROM comments 
     JOIN users ON comments.user_id = users.id
     LEFT JOIN shipments ON comments.shipment_id = shipments.id
-    WHERE 1=1 ${companyFilter}
+    LEFT JOIN companies ON shipments.company_id = companies.id
+    WHERE 1=1 ${companyFilter} 
+    AND shipments.id IS NOT NULL  -- <--- ADD THIS LINE (Fixes broken links)
     ORDER BY comments.created_at DESC 
-    LIMIT 5
+    LIMIT 6
   `;
 
   return {
@@ -253,6 +276,7 @@ export async function getDashboardStats(role, companyId) {
     readyToInvoice: completeCount[0]?.count || 0,
     invoiced: invoiced6MonthsCount[0]?.count || 0,
     damaged: damagedCount[0]?.count || 0,
+    graph: graphData || [], // Real data
     comments: recentComments || []
   };
 }
